@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>벽돌깨기 게임 (웹버전)</title>
+    <style>
+        body { background: #222; color: #fff; text-align: center; }
+        canvas { background: #000; display: block; margin: 30px auto; }
+    </style>
+</head>
+<body>
+    <h1>벽돌깨기 게임</h1>
+    <canvas id="gameCanvas" width="480" height="640"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 게임 변수
+        const WIDTH = 480, HEIGHT = 640;
+        const PADDLE_WIDTH = 80, PADDLE_HEIGHT = 15;
+        let paddleX = (WIDTH - PADDLE_WIDTH) / 2;
+        const PADDLE_Y = HEIGHT - 40;
+        let paddleSpeed = 7;
+        let rightPressed = false, leftPressed = false;
+
+        const BALL_RADIUS = 10;
+        let ballX = WIDTH / 2, ballY = HEIGHT / 2;
+        let ballDX = 4, ballDY = -4;
+
+        const BRICK_ROWS = 5, BRICK_COLS = 8;
+        const BRICK_WIDTH = WIDTH / BRICK_COLS;
+        const BRICK_HEIGHT = 30;
+        let bricks = [];
+        for(let r=0; r<BRICK_ROWS; r++) {
+            bricks[r] = [];
+            for(let c=0; c<BRICK_COLS; c++) {
+                bricks[r][c] = { x: c*BRICK_WIDTH, y: r*BRICK_HEIGHT+40, status: 1 };
+            }
+        }
+
+        function drawPaddle() {
+            ctx.fillStyle = "#0078ff";
+            ctx.fillRect(paddleX, PADDLE_Y, PADDLE_WIDTH, PADDLE_HEIGHT);
+        }
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, BALL_RADIUS, 0, Math.PI*2);
+            ctx.fillStyle = "#00ff78";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawBricks() {
+            for(let r=0; r<BRICK_ROWS; r++) {
+                for(let c=0; c<BRICK_COLS; c++) {
+                    if(bricks[r][c].status == 1) {
+                        ctx.fillStyle = "#c00";
+                        ctx.fillRect(bricks[r][c].x, bricks[r][c].y, BRICK_WIDTH-2, BRICK_HEIGHT-2);
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, WIDTH, HEIGHT);
+            drawBricks();
+            drawPaddle();
+            drawBall();
+        }
+
+        function collisionDetection() {
+            // 벽돌 충돌
+            for(let r=0; r<BRICK_ROWS; r++) {
+                for(let c=0; c<BRICK_COLS; c++) {
+                    let b = bricks[r][c];
+                    if(b.status == 1) {
+                        if(ballX > b.x && ballX < b.x + BRICK_WIDTH-2 &&
+                           ballY > b.y && ballY < b.y + BRICK_HEIGHT-2) {
+                            ballDY = -ballDY;
+                            b.status = 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        function gameLoop() {
+            draw();
+            collisionDetection();
+
+            // 패들 이동
+            if(rightPressed && paddleX < WIDTH - PADDLE_WIDTH) paddleX += paddleSpeed;
+            if(leftPressed && paddleX > 0) paddleX -= paddleSpeed;
+
+            // 공 이동
+            ballX += ballDX;
+            ballY += ballDY;
+
+            // 벽 충돌
+            if(ballX + BALL_RADIUS > WIDTH || ballX - BALL_RADIUS < 0) ballDX = -ballDX;
+            if(ballY - BALL_RADIUS < 0) ballDY = -ballDY;
+
+            // 패들 충돌
+            if(ballY + BALL_RADIUS > PADDLE_Y &&
+               ballX > paddleX && ballX < paddleX + PADDLE_WIDTH) {
+                ballDY = -ballDY;
+                ballY = PADDLE_Y - BALL_RADIUS; // 패들 위로 위치 조정
+            }
+
+            // 바닥에 닿으면 게임 오버
+            if(ballY + BALL_RADIUS > HEIGHT) {
+                alert("Game Over!");
+                document.location.reload();
+            }
+
+            // 승리 조건
+            let win = true;
+            for(let r=0; r<BRICK_ROWS; r++)
+                for(let c=0; c<BRICK_COLS; c++)
+                    if(bricks[r][c].status == 1) win = false;
+            if(win) {
+                alert("You Win!");
+                document.location.reload();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 키 이벤트
+        document.addEventListener("keydown", function(e) {
+            if(e.key == "Right" || e.key == "ArrowRight") rightPressed = true;
+            if(e.key == "Left" || e.key == "ArrowLeft") leftPressed = true;
+        });
+        document.addEventListener("keyup", function(e) {
+            if(e.key == "Right" || e.key == "ArrowRight") rightPressed = false;
+            if(e.key == "Left" || e.key == "ArrowLeft") leftPressed = false;
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
